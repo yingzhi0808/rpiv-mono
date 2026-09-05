@@ -39,24 +39,11 @@ fork 的唯一目的：让外部程序能直接提交问卷答案，不必模拟
 
 ## 跟上游同步
 
-vendor 分支、npm pack、rsync 那一套已退休。同步就是两次 rebase：
+执行流程（fetch、两次 rebase 的顺序、推送门禁、依赖漂移、E2E、reload 交代）的单一真相源是技能 `sync-rpiv-upstream`（`~/.agents/skills/sync-rpiv-upstream`，真身在 hello-world 仓库）；验证清单的可执行形态是 `rpiv-sync-e2e`（hello-world/scripts/，软链在 ~/.local/bin）。本节只留判断冲突需要的知识。
 
-```bash
-cd ~/workspace/rpiv-mono
-git fetch origin
+vendor 分支、npm pack、rsync 那一套已退休，同步就是两次 rebase。冲突基本必然发生，但基本都是良性的：两边往同一文件末尾追加内容、零重叠，删掉冲突标记两段都留即可。真正需要动脑的是上游重构 `QuestionnaireSession` 的提交路径或 `execute` 的 session 生命周期——2026-09-05 同步 2.9.0 时真实发生过一次：上游把内联 session 工厂提取成 `makeSessionFactory`，解法是给它的 config 加 `activeSession: SessionRef` 字段，在 `sessionRef.current = session` 旁边同步赋值。判断依据是上面三条设计约束。
 
-# PR 分支（主 checkout）
-git checkout feat/programmatic-answer-event
-git rebase origin/main
-git push --force-with-lease fork feat/programmatic-answer-event
-
-# runtime 分支（worktree 里做，别动主 checkout 的分支）
-git -C ~/workspace/rpiv-runtime rebase origin/main
-```
-
-冲突基本必然发生，但基本都是良性的：两边往同一文件末尾追加内容、零重叠，删掉冲突标记两段都留即可。真正需要动脑的是上游重构 `QuestionnaireSession` 的提交路径或 `execute` 的 session 生命周期——2026-09-05 同步 2.9.0 时真实发生过一次：上游把内联 session 工厂提取成 `makeSessionFactory`，解法是给它的 config 加 `activeSession: SessionRef` 字段，在 `sessionRef.current = session` 旁边同步赋值。判断依据是上面三条设计约束。
-
-rebase 完成后必须重跑[验证清单](#验证清单)，全项通过才算同步成功。
+rebase 完成后必须跑 `rpiv-sync-e2e`，全项通过才算同步成功。
 
 ## 依赖
 
