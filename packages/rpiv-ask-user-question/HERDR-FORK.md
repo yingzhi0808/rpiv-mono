@@ -1,6 +1,6 @@
 # 本地 fork 说明（单仓库形态）
 
-这是 `rpiv-mono`  monorepo 里 `packages/rpiv-ask-user-question` 的本地 fork，上游是 <https://github.com/juicesharp/rpiv-mono>（MIT）。2026-09-05 之前它是一份独立的 vendor 副本（npm 包基线 + vendor 分支同步），当天合并进 monorepo 单仓库，本文是合并后的形态；旧形态与旧同步流程在 git 历史里可查。
+这是 `rpiv-mono`  monorepo 里 `packages/rpiv-ask-user-question` 的本地 fork，上游是 <https://github.com/juicesharp/rpiv-mono>（MIT）。2026-09-05 之前它是一份独立的 vendor 副本（npm 包基线 + vendor 分支同步），当天合并进 monorepo 单仓库，本文是合并后的形态。旧仓库的分支与标签已收进本仓库 `refs/vendor/` 命名空间：`refs/vendor/heads/main` 是旧运行时线终点，`refs/vendor/heads/upstream` 是 vendor 分支，`refs/vendor/tags/upstream/*` 是各基线标签；旧同步流程的文档在这些提交的版本里可查。
 
 fork 的唯一目的：让外部程序能直接提交问卷答案，不必模拟按键。herdr 里 pi 作为执行者跑在独立 pane 中，守望方原先只能靠 `pane send-keys` 发方向键和回车，按错不报错、残缺答案会被当成真实用户答案送给模型。
 
