@@ -17,6 +17,8 @@ fork 的唯一目的：让外部程序能直接提交问卷答案，不必模拟
 
 **worktree 纪律：`~/workspace/rpiv-runtime` 永远停在 `runtime` 分支。** 切走分支，pi 的魔改就静默消失（问卷还在，程序化应答通道没了），而 pi 启动不会报错。需要在这个 worktree 里看别的分支时，看完切回 `runtime` 再走。
 
+**绝不在 runtime worktree 里跑 monorepo 测试套件（含 commit/push 触发的 hook）。** 2026-09-05 实测：coverage 全量跑里的 git fixture 测试会在 worktree 上下文里把共享 `.git` 当 fixture 重建——`core.bare` 被翻成 true、`runtime` 分支被移到 fixture 的 seed 历史，主 checkout 当场变裸库。对象库与其余引用未损，靠 worktree 的 HEAD reflog 找回提交、`core.bare` 翻回 false、worktree 内 `reset --hard` 复原。根因未定位到上游具体哪一行，只确定了触发条件是「worktree 内跑套件」：同一套件在主 checkout 跑过三次均无此事。跑测试去主 checkout 跑。
+
 ## 改了什么
 
 五个文件，除文档外全是新增，没有删改上游既有逻辑：
