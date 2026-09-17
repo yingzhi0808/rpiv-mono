@@ -21,7 +21,7 @@ fork 的唯一目的：让外部程序能直接提交问卷答案，不必模拟
 
 ## 改了什么
 
-五个文件，除文档外全是新增，没有删改上游既有逻辑：
+八个文件：一个新建，七个是在上游既有文件上改。七个里四个是纯追加，另外三个改写了既有行，合计删掉 7 行：`ask-user-question.ts` 与 `state/questionnaire-session.ts` 各一行，分别是解构加一项和 `import type` 加一个类型；`docs/tool-schema.md` 五行，是事件契约一节的散文重写以容纳两个新事件。没有删掉上游任何一条逻辑。
 
 | 文件 | 改动 |
 | --- | --- |
@@ -30,6 +30,16 @@ fork 的唯一目的：让外部程序能直接提交问卷答案，不必模拟
 | `ask-user-question.ts` | 扩展作用域新增 `activeSession` 引用（经 `makeSessionFactory` 的 config 传入，在 `sessionRef.current = session` 旁边同步赋值）并注册入站事件监听；`finally` 里与 blocked 事件同处清空 |
 | `index.ts` | 把新增的常量与类型加进 `./events` 的公开导出 |
 | `docs/tool-schema.md` | 事件契约一节补两个新事件，以及 2.1.0 就有但漏写的 `rpiv:ask-user:blocked` |
+| `state/questionnaire-session.test.ts` | 上游既有测试文件，追加 `answerExternal` 的用例（纯追加，117 行） |
+| `ask-user-question.external-answer.test.ts` | 本 fork 新建的唯一文件，测入站事件从监听到回执的整条路径（135 行） |
+| `CHANGELOG.md` | 在 `## [Unreleased]` 下追加一条 `### Added`（纯追加，4 行） |
+
+八个文件里只有 `CHANGELOG.md` 会反复冲突，因为上游每次发版都往 `## [Unreleased]`
+下面插发布标题，我们也在那儿加条目。2026-09-16 同步 2.10.1 时冲突就在这里：
+上游把 `## [2.10.1]` 与 `## [2.10.0]` 插在了 `## [Unreleased]` 和既有的
+`### Fixed`（bare CR，#192）之间，等于把那条 Fixed 归进了 2.10.0。解法是两边
+意图都保：我们的 `### Added` 留在 `## [Unreleased]` 下，上游的发布标题保持在
+`### Fixed` 之前。另外七个文件那一轮上游一个也没碰。
 
 设计约束（改的时候别破坏）：
 
