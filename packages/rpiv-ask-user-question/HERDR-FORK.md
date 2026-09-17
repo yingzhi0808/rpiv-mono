@@ -47,24 +47,30 @@ rebase 完成后必须跑 `rpiv-sync-e2e`，全项通过才算同步成功。
 
 ## 依赖
 
-worktree 根部 `npm ci`（monorepo 是 npm workspaces）。包内导入经根部 `node_modules` 解析：`@juicesharp/rpiv-config` 指向 workspace 源码，`@earendil-works/pi-tui` 是仓库锁定的版本（当前 0.80.6），与 pi 进程自带的版本（当前 0.84.x）不同——包里用到的只是按键匹配的纯函数与类型，2026-09-05 单仓库形态复测通过。真撞到按键行为诡异，这里是第一嫌疑。
+worktree 根部 `npm ci`（monorepo 是 npm workspaces）。包内导入经根部 `node_modules` 解析：`@juicesharp/rpiv-config` 指向 workspace 源码，`@earendil-works/pi-tui` 是仓库锁定的版本（当前 0.80.6），与 pi 进程自带的版本（当前 0.85.x）不同——包里用到的只是按键匹配的纯函数与类型，2026-09-16 在 pi 0.85.1 上复测通过。真撞到按键行为诡异，这里是第一嫌疑。
 
 ## 验证清单
 
 外层还需要 `~/.pi/agent/extensions/herdr-blocked-bridge.ts` 把 unix socket 桥到事件，以及客户端 `~/.local/bin/herdr-ask`（细节见 hello-world 仓库的 `skills/personal/spawn-pane-agent/SKILL.md`）。在 herdr pane 里起 `pi -a`，让它调 `ask_user_question`，然后 `herdr-ask <pane> answer '…'`，逐项核对：
 
-| 场景 | 期望 |
+| 场景（第一列与 `rpiv-sync-e2e` 输出的项名逐字一致） | 期望 |
 | --- | --- |
-| 单选 `optionIndexes: [1]` | `ok:true`，模型收到第 2 个选项 |
-| 多选 `optionIndexes: [0,2]` + `notes` | `ok:true`，模型收到两个标签与 notes |
-| 自定义 `text` | `ok:true`，等价于 `Type something.` 行 |
-| 索引越界 | `ok:false` 带范围说明，问卷仍停在原处可重提 |
-| 单选给多个索引 | `ok:false` |
-| 缺题或空 `answers` | `ok:false` 指出缺哪一题 |
-| 无活跃问卷时提交 | `ok:false`，`no questionnaire is awaiting input` |
-| 进程强杀后残留的死 socket | 客户端报「进程已经没了」，不挂起 |
+| 无活跃问卷时提交被拒 | 退出 1，stderr 含 `no questionnaire is awaiting input` |
+| 任务送达 | 执行者状态进入 `working`，或队列里看得到待处理行 |
+| 第一轮问卷弹出且结构对 | 两个题头依次是「单选」「多选」 |
+| 索引越界被拒且问卷保留 | 退出 1，stderr 含 `out of range`，问卷仍停在原处可重提 |
+| 单选给多个索引被拒 | 退出 1，stderr 含 `single-select` |
+| 缺题被拒并指名缺哪题 | 退出 1，stderr 含 `no answer supplied for question 1` |
+| 空 answers 被拒 | 退出 1，stderr 含 `no answer supplied for question 0` |
+| 单选+多选+notes 提交接受 | 退出 0；提交的是单选 `optionIndexes: [1]`、多选 `optionIndexes: [0,2]` 带 `notes: "why"` |
+| 第二轮问卷弹出且结构对 | 题头是「自定义」 |
+| 自定义文本提交接受 | 退出 0；等价于 `Type something.` 行 |
+| 模型侧信封逐字到达 | 执行者会话记录里 `User has answered` 那几行逐字含四段：`"单选验证题？"="乙"`、`"多选验证题？"="X, Z"`、`user notes: why`、`"自定义文本验证题？"="这是程序化提交的自定义回答` |
+| SIGKILL 后死 socket 即报不挂起 | socket 文件还在但进程已死，`herdr-ask get` 退出 2，报「连不上，多半是执行者进程已经没了留下的死 socket」，20 秒超时内返回不挂起 |
 
-以上各项在 2026-08-11（vendor 副本基线 2.4.0）、2026-09-05（vendor 副本基线 2.9.0）、2026-09-05（单仓库形态）三次全项实测通过。
+实测记录：2026-08-11（vendor 副本基线 2.4.0）、2026-09-05（vendor 副本基线 2.9.0）、
+2026-09-05（单仓库形态）三次跑的是当时那份八项清单。2026-09-16（单仓库形态，
+上游基线 2.10.1，pi 0.85.1）是清单补全到十二项之后的第一次全项通过。
 
 想彻底回到上游版本：把 `settings.json` 里那条 packages 改回 `npm:@juicesharp/rpiv-ask-user-question`，删掉 runtime worktree 即可。
 
